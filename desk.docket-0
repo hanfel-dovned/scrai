@@ -1,0 +1,10 @@
+:~  title+'Scrai'
+    info+'Prototype for querying AI on your namespace.'
+    color+0x6f.ff52
+    base+'scrai'
+    site+/scrai
+    version+[0 1 0]
+    website+'https://x.com/hanfel_dovned'
+    license+''
+==
+
