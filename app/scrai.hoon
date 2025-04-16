@@ -105,14 +105,26 @@
     =+  !<(=do +.cage)
     ?-    -.do
         %send
-      ?:  (gth (lent waiting) 0)  that
+      ::?:  (gth (lent waiting) 0)  that
       =.  waiting  paths.message.do
-      ::  XX  whitelist waiting
-      %-  emit
-      :*  %pass  /request  %agent
-          [~ridlyd %llm]
-          %poke  %scrai-request 
-          !>([%request message.do])
+      %-  emil
+      %+  weld
+      ::  Whitelist paths for ~ridlyd.
+      %+  turn
+        waiting
+      |=  =path
+      ^-  card
+      :*  %pass  (weld /white path)  %arvo  %c
+          %perm  %scrai  path  %r  
+          ~   %white  (sy [%.y ~ridlyd]~)
+      ==
+      ::  Poke ~ridlyd.
+      :~  ^-  card
+          :*  %pass  /request  %agent
+              [~ridlyd %llm]
+              %poke  %scrai-request 
+              !>([%request message.do])
+          ==
       ==
     ==
   ::
@@ -121,9 +133,19 @@
     ?-    -.response
         %response
       ?:  =(0 (lent waiting))  that
-      ::  XX blacklist waiting
-      =.  waiting  ~
-      that(responses [text.response responses])
+      =/  paths  waiting
+      =.  waiting   ~
+      =.  responses  [text.response responses]
+      ::  Remove ~ridlyd's permissions.
+      %-  emil
+      %+  turn
+        waiting
+      |=  =path
+      ^-  card
+      :*  %pass  (weld /remove path)  %arvo  %c
+          %perm  %scrai  path  %r  
+          ~   %white  ~
+      ==
     ==
   ==
 ::

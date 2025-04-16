@@ -104,8 +104,16 @@
   ?-    -.req
       %request
     =.  waiting  text.message.req
-    ::  XX remote scry paths.message.req
-    that
+    ::  Read requester's paths. (Only the first one for simplicity for now).
+    ?~  paths.message.req  
+      that
+    =/  p=path  -.paths.message.req
+    %-  emit
+    ^-  card
+    :*  %pass  /read/(scot %da now.bowl)  %arvo  %c
+        %warp  src.bowl  %scrai
+        ~  %sing  %x  [%da now.bowl]  p
+    ==
   ==
 ::
 ::
@@ -144,11 +152,18 @@
       ==
   ==
 ::
-::  Forward a response from LLM to %scrai.
 ++  arvo
   |=  [=wire sign=sign-arvo]
   ^+  that
-  ::  XX handle remote scry response
+  ~&  >>  sign
+  ::  Handle remote Clay response.
+  ?:  ?=([%clay %writ *] sign)
+    =/  =rant:clay  (need p.sign)
+    =/  data  r.rant
+    ~&  data
+    =/  text  !<((list @t) q.data)
+    ~&  >  text
+    that
   ::  convert files to text and then weld text to waiting
   ::  =/  text  (weld (trip waiting) ...)
   ::  %-  emit
