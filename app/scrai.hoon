@@ -4,7 +4,12 @@
 ::
 |%
 +$  versioned-state  $%(state-0)
-+$  state-0  [%0 data=(list path)]
++$  state-0
+  $:  %0 
+      data=(list path) 
+      responses=(list @t)
+      waiting=(list path)
+  ==
 +$  card  card:agent:gall
 --
 ::
@@ -95,6 +100,31 @@
   ?+    -.cage  !!
       %handle-http-request
     (handle-http !<([@ta =inbound-request:eyre] +.cage))
+  ::
+      %scrai-do
+    =+  !<(=do +.cage)
+    ?-    -.do
+        %send
+      ?:  (gth (lent waiting) 0)  that
+      =.  waiting  paths.message.do
+      ::  XX  whitelist waiting
+      %-  emit
+      :*  %pass  /request  %agent
+          [~ridlyd %llm]
+          %poke  %scrai-request 
+          !>([%request message.do])
+      ==
+    ==
+  ::
+      %scrai-response
+    =+  !<(=response +.cage)
+    ?-    -.response
+        %response
+      ?:  =(0 (lent waiting))  that
+      ::  XX blacklist waiting
+      =.  waiting  ~
+      that(responses [text.response responses])
+    ==
   ==
 ::
 ++  handle-http
@@ -115,17 +145,26 @@
       [200 ~ [%html ui]]
     ::
         [%scrai %state ~]
-      [200 ~ [%json enjs-data]]
+      [200 ~ [%json enjs-state]]
     ==
   ==
 ::
-++  enjs-data
+++  enjs-state
   ^-  json
-  %-  frond:enjs:format
-  :-  %data
-  :-  %a
-  %+  turn
-    data
-  |=  =path
-  (path:enjs:format path)
+  %-  pairs:enjs:format
+  :~
+    :-  %data
+    :-  %a
+    %+  turn
+      data
+    |=  =path
+    (path:enjs:format path)
+  ::
+    :-  %responses
+    :-  %a
+    %+  turn
+      responses
+    |=  text=@t
+    [%s text]
+  ==
 --
