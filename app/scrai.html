@@ -1,7 +1,9 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>data</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scrai</title>
   <style>
     body, html {
       margin: 0;
@@ -11,43 +13,196 @@
       height: 100%;
       width: 100%;
       display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: flex-start;
+      justify-content: center;
+      align-items: flex-start;
       color: #333;
+    }
+    .container {
+      max-width: 800px;
+      width: 100%;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+    .data-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .data-card {
+      background: #fff;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      padding: 10px 15px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .data-card:hover {
+      background: #e6f0ff;
+    }
+    .data-card.selected {
+      background: #007bff;
+      color: #fff;
+      border-color: #007bff;
+    }
+    #requestInput {
+      width: 100%;
+      height: 80px;
+      padding: 10px;
+      font-size: 14px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      resize: vertical;
+      box-sizing: border-box;
+      margin-bottom: 10px;
+    }
+    .attachment-container {
+      margin: 10px 0;
+      font-style: italic;
+    }
+    #sendButton {
+      padding: 10px 20px;
+      font-size: 14px;
+      background: #007bff;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    #sendButton:disabled {
+      background: #6c757d;
+      cursor: not-allowed;
+    }
+    .spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid #ccc;
+      border-top-color: #007bff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      vertical-align: middle;
+      margin-left: 10px;
+    }
+    .hidden { display: none; }
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to   { transform: rotate(360deg); }
+    }
+    #responseContainer {
+      margin-top: 20px;
+      padding: 15px;
+      background: #fff;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      min-height: 40px;
+      white-space: pre-wrap;
     }
   </style>
 </head>
 <body>
-  <div class="data-container" id="dataContainer"></div>
+  <div class="container">
+    <div class="data-list" id="dataContainer"></div>
+
+    <textarea id="requestInput" placeholder="Enter your request..."></textarea>
+    <div class="attachment-container">Attached path: <span id="attachedPath">None</span></div>
+    <button id="sendButton">Send</button><div id="loadingSpinner" class="spinner hidden"></div>
+    <div id="responseContainer"></div>
+  </div>
 
   <script>
-    document.addEventListener("DOMContentLoaded", function() {
-      let dataData = [];
-      let authed = false;
+    document.addEventListener("DOMContentLoaded", () => {
+      let dataPaths = [];
+      let currentResponse = '';
+      let attachedPath = null;
+      let pollingId = null;
 
-      fetch('/scrai/state')
-        .then(response => response.json())
-        .then(data => {
-          dataData = data.data;
-          renderdata();
-        });
+      const dataContainer = document.getElementById('dataContainer');
+      const requestInput = document.getElementById('requestInput');
+      const attachedPathSpan = document.getElementById('attachedPath');
+      const sendButton = document.getElementById('sendButton');
+      const spinner = document.getElementById('loadingSpinner');
+      const responseContainer = document.getElementById('responseContainer');
 
-      function renderdata() {
-        const container = document.getElementById("dataContainer");
-        container.innerHTML = '';
+      // Fetch initial state
+      fetchState().then(state => {
+        dataPaths = state.data || [];
+        currentResponse = state.response || '';
+        renderDataList();
+      });
 
-        dataData.forEach((path) => {
+      // Render available data paths
+      function renderDataList() {
+        dataContainer.innerHTML = '';
+        dataPaths.forEach(path => {
           const card = document.createElement('div');
-
-          const details = document.createElement('div');
-          const anchor = document.createElement('a');
-          anchor.textContent = path
-          details.appendChild(anchor);
-          card.appendChild(details);
-
-          container.appendChild(card);
+          card.className = 'data-card';
+          card.textContent = path;
+          card.addEventListener('click', () => selectPath(card, path));
+          dataContainer.appendChild(card);
         });
+      }
+
+      function selectPath(element, path) {
+        // Clear previous selection
+        document.querySelectorAll('.data-card.selected').forEach(el => el.classList.remove('selected'));
+        element.classList.add('selected');
+        attachedPath = path;
+        attachedPathSpan.textContent = path;
+      }
+
+      // Handle send action
+      sendButton.addEventListener('click', () => {
+        const text = requestInput.value.trim();
+        if (!text || !attachedPath) return;
+
+        // Disable UI
+        sendButton.disabled = true;
+        spinner.classList.remove('hidden');
+        responseContainer.textContent = '';
+
+        const oldResponse = currentResponse;
+
+        // Post send request
+        fetch('/scrai', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ send: { text, path: attachedPath } })
+        })
+        .then(res => {
+          if (!res.ok) throw new Error('Send failed');
+          // Start polling
+          pollingId = setInterval(() => checkForNewResponse(oldResponse), 3000);
+        })
+        .catch(err => {
+          console.error(err);
+          sendButton.disabled = false;
+          spinner.classList.add('hidden');
+          alert('Error sending request');
+        });
+      });
+
+      // Polling function
+      function checkForNewResponse(oldResponse) {
+        fetchState().then(state => {
+          if (state.response && state.response !== oldResponse) {
+            clearInterval(pollingId);
+            currentResponse = state.response;
+            responseContainer.textContent = currentResponse;
+            // Re-enable UI
+            sendButton.disabled = false;
+            spinner.classList.add('hidden');
+          }
+        }).catch(err => {
+          console.error('Polling error', err);
+        });
+      }
+
+      // Utility to get state
+      function fetchState() {
+        return fetch('/scrai/state')
+          .then(res => res.json());
       }
     });
   </script>

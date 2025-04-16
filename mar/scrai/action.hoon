@@ -1,12 +1,12 @@
 /-  *scrai
-|_  r=respone
+|_  act=action
 ++  grow
   |%
-  ++  noun  r
+  ++  noun  act
   --
 ++  grab
   |%
-  ++  noun  response
+  ++  noun  action
   --
 ++  grad  %noun
 --

@@ -7,8 +7,7 @@
 +$  state-0
   $:  %0 
       data=(list path) 
-      responses=(list @t)
-      waiting=(list path)
+      response=@t
   ==
 +$  card  card:agent:gall
 --
@@ -56,8 +55,8 @@
 ::
 ++  on-arvo
   |=  [=wire =sign-arvo]
-  ^-  (quip card _this)
-  `this
+  =^  cards  state  abet:(arvo:hc [wire sign-arvo])
+  [cards this]
 ::
 ++  on-watch
   |=  =path
@@ -101,50 +100,110 @@
       %handle-http-request
     (handle-http !<([@ta =inbound-request:eyre] +.cage))
   ::
-      %scrai-do
-    =+  !<(=do +.cage)
-    ?-    -.do
-        %send
-      ::?:  (gth (lent waiting) 0)  that
-      =.  waiting  paths.message.do
-      %-  emil
-      %+  weld
-      ::  Whitelist paths for ~ridlyd.
-      %+  turn
-        waiting
-      |=  =path
-      ^-  card
-      :*  %pass  (weld /white path)  %arvo  %c
-          %perm  %scrai  path  %r  
-          ~   %white  (sy [%.y ~ridlyd]~)
+      %scrai-action
+    =/  act  !<(action +.cage)
+    (handle-action act)
+  ==
+::
+::  User poke from frontend.
+++  handle-action
+  |=  act=action
+  ^+  that
+  ?-    -.act
+      %send
+    =/  text
+      %-  crip
+      ;:  weld
+        (trip text.message.act)
+        " FILE NAME: "
+        `tape`path.message.act
+        " FILE CONTENTS: "
+        .^((list @t) %cx (weld /(scot %p our.bowl)/scrai/(scot %da now.bowl) path.message.act))
       ==
-      ::  Poke ~ridlyd.
-      :~  ^-  card
-          :*  %pass  /request  %agent
-              [~ridlyd %llm]
-              %poke  %scrai-request 
-              !>([%request message.do])
+    ~&  >>  text
+    %-  emit
+    ^-  card
+    :*  %pass 
+        /chat/(scot %da now.bowl)
+        %arvo 
+        %i
+        %request 
+        (llm-request text) 
+        *outbound-config:iris
+    ==
+  ==
+::
+::  Create the outgoing LLM HTTP request
+::  according to OpenAI API.
+++  llm-request
+  |=  text=@t
+  ^-  request:http
+  :*  %'POST'
+      'http://localhost:11434/v1/chat/completions'
+      :~  ['Content-Type' 'application/json']
+          :: ['Authorization' 'Bearer 3QCDCG0-NJZ4X04-PMRR7CF-MT0BJ96']
+      ==
+  ::
+      :-  ~
+      =/  messages
+        :~  [`who`%system prompt]
+            [`who`%user text]
+        ==
+      %-  json-to-octs:server
+      ^-  json
+      %-  pairs:enjs:format
+      :~  [%model s+'llama3.2:latest']
+          [%stream b+%.n]
+          [%temperature n+'0.7']
+          :-  %messages
+          :-  %a
+          %+  turn
+            messages
+          |=  [=who what=@t]
+          ^-  json
+          %-  pairs:enjs:format
+          :~  [%role s+who]
+              [%content s+what]
           ==
       ==
-    ==
-  ::
-      %scrai-response
-    =+  !<(=response +.cage)
-    ?-    -.response
-        %response
-      ?:  =(0 (lent waiting))  that
-      =/  paths  waiting
-      =.  waiting   ~
-      =.  responses  [text.response responses]
-      ::  Remove ~ridlyd's permissions.
-      %-  emil
-      %+  turn
-        waiting
-      |=  =path
-      ^-  card
-      :*  %pass  (weld /remove path)  %arvo  %c
-          %perm  %scrai  path  %r  
-          ~   %white  ~
+  ==
+::
+::  Receive response from LLM.
+++  arvo
+  |=  [=wire sign=sign-arvo]
+  ^+  that  
+  ~&  >  sign
+  ?.  ?=([%iris %http-response *] sign)  that
+  =/  reply=@t  (response-to-reply client-response.sign)
+  that(response reply)
+::
+::  Parse LLM response.
+++  response-to-reply
+  |=  response=client-response:iris
+  ^-  @t
+  ?+    -.response  !!
+      %finished
+    =/  mime  (need full-file.response)
+    =/  =json  (need (de:json:html q.data.mime))
+    ~&  >>  json
+    ?+    -.json  !!
+        %o
+      =/  kson  (~(got by p.json) 'choices')
+      ?+    -.kson  !!
+          %a
+        =/  lson  (snag 0 p.kson)  
+        ?+    -.lson  !!
+            %o
+          =/  mson  (~(got by p.lson) 'message')
+          ?+    -.mson  !!
+              %o
+            =/  replyson  (~(got by p.mson) 'content')
+            ?+    -.replyson  !!
+                %s
+              p.replyson
+            ==
+          ==
+        ==
       ==
     ==
   ==
@@ -158,6 +217,15 @@
   ::
   ?+    method.request.inbound-request
     (emil (flop (send [405 ~ [%stock ~]])))
+      %'POST'
+    ?+    site  that
+        [%scrai ~]
+      =/  =json  (need (de:json:html q:(need body.request.inbound-request)))
+      =/  act=action  (dejs-post json)
+      =.  that  (handle-action act)
+      %-  emil  %-  flop  %-  send
+      [200 ~ [%none ~]]
+    ==
   ::
       %'GET'
     %-  emil  %-  flop  %-  send
@@ -182,11 +250,32 @@
     |=  =path
     (path:enjs:format path)
   ::
-    :-  %responses
-    :-  %a
-    %+  turn
-      responses
-    |=  text=@t
-    [%s text]
+    :-  %response
+    [%s response]
   ==
+::
+++  dejs-post
+  =,  dejs:format
+  |=  jon=json
+  ^-  action
+  %.  jon
+  %-  of
+  :~  [%send (ot ~[text+so path+pa])]
+  ==
+::
+++  prompt
+  '''
+  You are a helpful AI assistant. The user will be messaging you with
+  some text (their message) and a file from their
+  Urbit ship, which will be labelled by file name and contain the full
+  contents. Use these contents when responding.
+
+  You will only receive a single message before conversational context is reset,
+  so respond as in-depth as possible; no clarifying questions.
+
+  The format of the message will be:
+
+  <message text from user> FILE NAME: <file name> FILE CONTENTS: <file contents>
+  '''
+::
 --
