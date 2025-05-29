@@ -1,7 +1,11 @@
 |%
 +$  who  ?(%system %user %assistant)
 +$  message  [text=@t =path]
-+$  action  :: user poke from frontend
++$  action  :: user poke
   $%  [%send =message]
+      [%run ~]
+      [%set-llm-url url=@t]
+      [%set-llm-auth auth=@t]
+      [%set-llm-model model=@t]
   ==
 --

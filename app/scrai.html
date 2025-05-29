@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Scrai</title>
   <style>
+    /* ---------- layout & typography ---------- */
     body, html {
       margin: 0;
       padding: 0;
@@ -17,87 +18,49 @@
       align-items: flex-start;
       color: #333;
     }
-    .container {
-      max-width: 800px;
-      width: 100%;
-      padding: 20px;
-      box-sizing: border-box;
-    }
-    .data-list {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-bottom: 20px;
-    }
+    .container { max-width: 800px; width: 100%; padding: 20px; box-sizing: border-box; }
+
+    /* ---------- data path chips ---------- */
+    .data-list { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
     .data-card {
-      background: #fff;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      padding: 10px 15px;
-      cursor: pointer;
-      transition: background 0.2s;
+      background: #fff; border: 1px solid #ccc; border-radius: 4px;
+      padding: 10px 15px; cursor: pointer; transition: background 0.2s;
     }
-    .data-card:hover {
-      background: #e6f0ff;
-    }
-    .data-card.selected {
-      background: #007bff;
-      color: #fff;
-      border-color: #007bff;
-    }
+    .data-card:hover { background: #e6f0ff; }
+    .data-card.selected { background: #007bff; color: #fff; border-color: #007bff; }
+
+    /* ---------- input area ---------- */
     #requestInput {
-      width: 100%;
-      height: 80px;
-      padding: 10px;
-      font-size: 14px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      resize: vertical;
-      box-sizing: border-box;
-      margin-bottom: 10px;
+      width: 100%; height: 80px; padding: 10px; font-size: 14px;
+      border: 1px solid #ccc; border-radius: 4px; resize: vertical;
+      box-sizing: border-box; margin-bottom: 10px;
     }
-    .attachment-container {
-      margin: 10px 0;
-      font-style: italic;
-    }
+    .attachment-container { margin: 10px 0; font-style: italic; }
+
+    /* ---------- buttons & spinner ---------- */
     #sendButton {
-      padding: 10px 20px;
-      font-size: 14px;
-      background: #007bff;
-      color: #fff;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      transition: background 0.2s;
+      padding: 10px 20px; font-size: 14px; background: #007bff; color: #fff;
+      border: none; border-radius: 4px; cursor: pointer; transition: background 0.2s;
     }
-    #sendButton:disabled {
-      background: #6c757d;
-      cursor: not-allowed;
-    }
+    #sendButton:disabled { background: #6c757d; cursor: not-allowed; }
     .spinner {
-      display: inline-block;
-      width: 20px;
-      height: 20px;
-      border: 3px solid #ccc;
-      border-top-color: #007bff;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      vertical-align: middle;
-      margin-left: 10px;
+      display: inline-block; width: 20px; height: 20px;
+      border: 3px solid #ccc; border-top-color: #007bff;
+      border-radius: 50%; animation: spin 1s linear infinite;
+      vertical-align: middle; margin-left: 10px;
     }
     .hidden { display: none; }
-    @keyframes spin {
-      from { transform: rotate(0deg); }
-      to   { transform: rotate(360deg); }
-    }
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+    /* ---------- response box ---------- */
     #responseContainer {
-      margin-top: 20px;
-      padding: 15px;
-      background: #fff;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      min-height: 40px;
-      white-space: pre-wrap;
+      margin-top: 20px; padding: 15px; background: #fff;
+      border: 1px solid #ccc; border-radius: 4px;
+      min-height: 40px; white-space: pre-wrap;
+    }
+    pre {
+      background: #f0f0f0; padding: 12px; border-radius: 4px;
+      overflow-x: auto; margin: 0;
     }
   </style>
 </head>
@@ -113,67 +76,121 @@
 
   <script>
     document.addEventListener("DOMContentLoaded", () => {
-      let dataPaths = [];
-      let currentResponse = '';
-      let attachedPath = null;
-      let pollingId = null;
+      let dataPaths   = [];
+      let curRespObj  = null;          // always an object or null after parse
+      let attachedPath= null;
+      let pollingId   = null;
 
-      const dataContainer = document.getElementById('dataContainer');
-      const requestInput = document.getElementById('requestInput');
-      const attachedPathSpan = document.getElementById('attachedPath');
-      const sendButton = document.getElementById('sendButton');
-      const spinner = document.getElementById('loadingSpinner');
-      const responseContainer = document.getElementById('responseContainer');
+      const $ = id => document.getElementById(id);
+      const dataContainer = $('dataContainer');
+      const requestInput  = $('requestInput');
+      const attachedSpan  = $('attachedPath');
+      const sendButton    = $('sendButton');
+      const spinner       = $('loadingSpinner');
+      const respBox       = $('responseContainer');
 
-      // Fetch initial state
+      /* ---------- parsing helper ---------- */
+      const parseResponse = raw => {
+        if (!raw) return null;
+        if (typeof raw === 'object') return raw;      // already parsed
+
+        // raw is a string like '{\0a  "text": "Hello!"\0a}'
+        try {
+          const cleaned = raw
+            .replace(/\\0a/g, '\n')                  // literal backslash+0a → newline
+            .replace(/[\u0000-\u001F]/g, '');        // strip control bytes (NUL etc.)
+          return JSON.parse(cleaned);
+        } catch (err) {
+          console.error('Failed to parse response:', err, raw);
+          return null;
+        }
+      };
+
+      /* ---------- UI render helpers ---------- */
+      const renderResponse = obj => {
+        respBox.innerHTML = '';
+        if (!obj) return;
+
+        if (obj.text) {
+          respBox.textContent = obj.text;
+        } else if (obj.poke) {
+          const pre = document.createElement('pre');
+          pre.textContent = obj.poke;
+          respBox.appendChild(pre);
+
+          const runBtn = document.createElement('button');
+          runBtn.textContent = 'Run';
+          runBtn.style.marginTop = '10px';
+
+          runBtn.addEventListener('click', () => {
+            runBtn.disabled = true; runBtn.textContent = 'Running…';
+            fetch('/scrai', {
+              method : 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body   : JSON.stringify({ run: null })
+            })
+            .then(r => {
+              if (!r.ok) throw new Error('Run failed');
+              respBox.innerHTML = '<em>Poke sent.</em>';
+            })
+            .catch(err => {
+              console.error(err);
+              runBtn.disabled = false; runBtn.textContent = 'Run';
+              alert('Error running poke');
+            });
+          });
+
+          respBox.appendChild(runBtn);
+        }
+      };
+
+      const fetchState = () => fetch('/scrai/state').then(r => r.json());
+
+      /* ---------- initial load ---------- */
       fetchState().then(state => {
-        dataPaths = state.data || [];
-        currentResponse = state.response || '';
+        dataPaths  = state.data || [];
+        curRespObj = parseResponse(state.response);
         renderDataList();
+        renderResponse(curRespObj);
       });
 
-      // Render available data paths
       function renderDataList() {
         dataContainer.innerHTML = '';
         dataPaths.forEach(path => {
-          const card = document.createElement('div');
-          card.className = 'data-card';
-          card.textContent = path;
-          card.addEventListener('click', () => selectPath(card, path));
-          dataContainer.appendChild(card);
+          const chip = document.createElement('div');
+          chip.className = 'data-card';
+          chip.textContent = path;
+          chip.addEventListener('click', () => selectPath(chip, path));
+          dataContainer.appendChild(chip);
         });
       }
 
-      function selectPath(element, path) {
-        // Clear previous selection
-        document.querySelectorAll('.data-card.selected').forEach(el => el.classList.remove('selected'));
-        element.classList.add('selected');
+      function selectPath(el, path) {
+        document.querySelectorAll('.data-card.selected').forEach(c => c.classList.remove('selected'));
+        el.classList.add('selected');
         attachedPath = path;
-        attachedPathSpan.textContent = path;
+        attachedSpan.textContent = path;
       }
 
-      // Handle send action
+      /* ---------- send ---------- */
       sendButton.addEventListener('click', () => {
         const text = requestInput.value.trim();
         if (!text || !attachedPath) return;
 
-        // Disable UI
         sendButton.disabled = true;
         spinner.classList.remove('hidden');
-        responseContainer.textContent = '';
+        respBox.textContent = '';
 
-        const oldResponse = currentResponse;
+        const prevJSON = JSON.stringify(curRespObj || {});
 
-        // Post send request
         fetch('/scrai', {
-          method: 'POST',
+          method : 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ send: { text, path: attachedPath } })
+          body   : JSON.stringify({ send: { text, path: attachedPath } })
         })
-        .then(res => {
-          if (!res.ok) throw new Error('Send failed');
-          // Start polling
-          pollingId = setInterval(() => checkForNewResponse(oldResponse), 3000);
+        .then(r => {
+          if (!r.ok) throw new Error('Send failed');
+          pollingId = setInterval(() => pollForChange(prevJSON), 3000);
         })
         .catch(err => {
           console.error(err);
@@ -183,26 +200,21 @@
         });
       });
 
-      // Polling function
-      function checkForNewResponse(oldResponse) {
-        fetchState().then(state => {
-          if (state.response && state.response !== oldResponse) {
-            clearInterval(pollingId);
-            currentResponse = state.response;
-            responseContainer.textContent = currentResponse;
-            // Re-enable UI
-            sendButton.disabled = false;
-            spinner.classList.add('hidden');
-          }
-        }).catch(err => {
-          console.error('Polling error', err);
-        });
-      }
-
-      // Utility to get state
-      function fetchState() {
-        return fetch('/scrai/state')
-          .then(res => res.json());
+      /* ---------- polling ---------- */
+      function pollForChange(prevJSON) {
+        fetchState()
+          .then(state => {
+            const obj = parseResponse(state.response);
+            const newJSON = JSON.stringify(obj || {});
+            if (newJSON !== prevJSON) {
+              clearInterval(pollingId);
+              curRespObj = obj;
+              renderResponse(curRespObj);
+              sendButton.disabled = false;
+              spinner.classList.add('hidden');
+            }
+          })
+          .catch(err => console.error('Polling error', err));
       }
     });
   </script>

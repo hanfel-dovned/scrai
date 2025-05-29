@@ -1,5 +1,5 @@
 :~  title+'Scrai'
-    info+'Prototype for querying AI on your namespace.'
+    info+'Prototype for AI on Urbit.'
     color+0x6f.ff52
     base+'scrai'
     site+/scrai
