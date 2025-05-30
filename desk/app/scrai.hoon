@@ -151,11 +151,12 @@
         *outbound-config:iris
     ==
   ::
-  ::  Assume the current response is a poke and try to run it.
+  ::  Run a poke.
       %run
     %-  emit
-    ~&  >  !<(card (slap !>(~) (ream response)))
-    !<(card (slap !>(~) (ream response)))
+    ~&  >>  cord.act
+    !<  card:agent:gall  
+    (slap !>([bowl=bowl ..zuse]) (ream cord.act))
   ==
 ::
 ::  Create the outgoing LLM HTTP request
@@ -286,7 +287,7 @@
   %.  jon
   %-  of
   :~  [%send (ot ~[text+so path+pa])]
-      [%run ul]
+      [%run (ot ~[cord+so])]
   ==
 ::
 ++  prompt

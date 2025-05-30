@@ -76,10 +76,10 @@
 
   <script>
     document.addEventListener("DOMContentLoaded", () => {
-      let dataPaths   = [];
-      let curRespObj  = null;          // always an object or null after parse
-      let attachedPath= null;
-      let pollingId   = null;
+      let dataPaths    = [];
+      let curRespObj   = null;      // parsed object
+      let attachedPath = null;
+      let pollingId    = null;
 
       const $ = id => document.getElementById(id);
       const dataContainer = $('dataContainer');
@@ -92,21 +92,19 @@
       /* ---------- parsing helper ---------- */
       const parseResponse = raw => {
         if (!raw) return null;
-        if (typeof raw === 'object') return raw;      // already parsed
-
-        // raw is a string like '{\0a  "text": "Hello!"\0a}'
+        if (typeof raw === 'object') return raw;
         try {
           const cleaned = raw
-            .replace(/\\0a/g, '\n')                  // literal backslash+0a → newline
-            .replace(/[\u0000-\u001F]/g, '');        // strip control bytes (NUL etc.)
+            .replace(/\\0a/g, '\n')               // literal backslash+0a -> newline
+            .replace(/[\u0000-\u001F]/g, '');     // strip control chars
           return JSON.parse(cleaned);
-        } catch (err) {
-          console.error('Failed to parse response:', err, raw);
+        } catch (e) {
+          console.error('parseResponse error', e, raw);
           return null;
         }
       };
 
-      /* ---------- UI render helpers ---------- */
+      /* ---------- UI render ---------- */
       const renderResponse = obj => {
         respBox.innerHTML = '';
         if (!obj) return;
@@ -114,8 +112,9 @@
         if (obj.text) {
           respBox.textContent = obj.text;
         } else if (obj.poke) {
+          const pokeCord = obj.poke;              // capture for Run
           const pre = document.createElement('pre');
-          pre.textContent = obj.poke;
+          pre.textContent = pokeCord;
           respBox.appendChild(pre);
 
           const runBtn = document.createElement('button');
@@ -123,11 +122,13 @@
           runBtn.style.marginTop = '10px';
 
           runBtn.addEventListener('click', () => {
-            runBtn.disabled = true; runBtn.textContent = 'Running…';
+            runBtn.disabled = true;
+            runBtn.textContent = 'Running…';
+
             fetch('/scrai', {
               method : 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body   : JSON.stringify({ run: null })
+              body   : JSON.stringify({ run: { cord: pokeCord } })
             })
             .then(r => {
               if (!r.ok) throw new Error('Run failed');
@@ -135,7 +136,8 @@
             })
             .catch(err => {
               console.error(err);
-              runBtn.disabled = false; runBtn.textContent = 'Run';
+              runBtn.disabled = false;
+              runBtn.textContent = 'Run';
               alert('Error running poke');
             });
           });
@@ -181,7 +183,7 @@
         spinner.classList.remove('hidden');
         respBox.textContent = '';
 
-        const prevJSON = JSON.stringify(curRespObj || {});
+        const prevRespJSON = JSON.stringify(curRespObj || {});
 
         fetch('/scrai', {
           method : 'POST',
@@ -190,7 +192,7 @@
         })
         .then(r => {
           if (!r.ok) throw new Error('Send failed');
-          pollingId = setInterval(() => pollForChange(prevJSON), 3000);
+          pollingId = setInterval(() => pollForChange(prevRespJSON), 3000);
         })
         .catch(err => {
           console.error(err);
