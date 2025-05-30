@@ -4,7 +4,8 @@
 
 - Connect to a running LLM by providing an API key.
 - Read files from Clay and include them in LLM queries.
-- Have the LLM generate actions to run on your ship (with your approval).
+- Have the LLM generate actions to run on your ship:
+  - Add a link if you have [%links](https://github.com/hanfel-dovned/links) installed.
 
 ## Installation
 
