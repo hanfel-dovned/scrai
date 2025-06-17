@@ -6,7 +6,6 @@
 +$  versioned-state  $%(state-0)
 +$  state-0
   $:  %0 
-      data=(list path) 
       =messages
       llm-url=@t
       llm-auth=@t
@@ -83,8 +82,6 @@
   ^+  that
   =.  llm-model  'gpt-4o'
   =.  llm-url  'https://api.openai.com/v1/chat/completions'
-  =.  data  
-    .^((list path) %ct /(scot %p our.bowl)/scrai/(scot %da now.bowl)/fil)
   %-  emit
   :*  %pass   /eyre/connect   
       %arvo  %e  %connect
@@ -131,6 +128,8 @@
   ::
   ::  Send a message to the LLM.
       %send
+    =/  =time  (from-unix-ms:chrono:userlib (unm:chrono:userlib now.bowl))
+    =.  messages  (put:orm messages time [%user text.act])
     %-  emit
     ^-  card
     :*  %pass 
@@ -138,7 +137,7 @@
         %arvo 
         %i
         %request 
-        (llm-request text.act) 
+        llm-request
         *outbound-config:iris
     ==
   ::
@@ -153,7 +152,6 @@
 ::  Create the outgoing LLM HTTP request
 ::  according to OpenAI API.
 ++  llm-request
-  |=  text=@t
   ^-  request:http
   :*  %'POST'
       llm-url
@@ -226,8 +224,18 @@
     =/  scryson  (~(got by p.json) 'scry')
     ?+    -.scryson  error
         %s
-      =/  path  (pa:dejs:format scryson)
-      =/  scry-result  .^(@t %gy path)
+      =/  p=path  (pa:dejs:format scryson)
+      ~&  >  p
+      ::  this will look like /~/appname/~/extension, so we insert bowls
+      =/  new=path
+        %+  welp
+          :~  (scot %p our.bowl)
+              +6:p
+              (scot %da now.bowl)
+          ==
+        +15:p
+      ~&  >  new
+      =/  scry-result  .^(@t %gy new)
       :-  ~
       :-  %user
       %-  crip
@@ -306,13 +314,6 @@
   ^-  json
   %-  pairs:enjs:format
   :~
-    :-  %data
-    :-  %a
-    %+  turn
-      data
-    |=  =path
-    (path:enjs:format path)
-  ::
     :-  %messages
     :-  %a
     %+  turn
@@ -320,7 +321,7 @@
     |=  [time=@da [=who text=cord]]
     ^-  json
     %-  pairs:enjs:format
-    :~  [%time s+(scot %ud (unm:chrono:userlib time))]
+    :~  [%time n+(scot %ud (unm:chrono:userlib time))]
         [%text s+text]
         [%who s+who]
     ==
@@ -353,7 +354,7 @@
 
   When it is appropriate to respond to the user with a message rather than an action, respond with a JSON object keyed with "message" where the string is your message:
 
-  {message: <your-natural-language>}
+  {"message": "<your-natural-language>"}
 
   If the user makes a vague request for you to perform an action, you can ask for clarification before responding with a poke or scry. For instance, if they ask to add "a link to their X profile" without telling you what their account name is, you should ask what their account name is before guessing the link they want. If they ask to change the color of some background somewhere, ask which color rather than guessing, unless they seem to want you to just randomly change it.
 
@@ -415,7 +416,14 @@
 
   The paths available to us will be documented further below. When the user asks you for data that corresponds to one of these paths, you will respond with:
 
-  {scry: <path>}
+  {"scry": "<path>"}
+
+  A path will always be formatted as:
+  /~/appname/~/hello/world
+  /~/links/~/links
+  /~/example/~/this/is/a/path
+
+  The app documentation writer may or may not include the initial segment surrounded by the ~s, where the center corresponds to the name of the app. If they omit this from their documentation, derive it from the name of the app and make sure to include all three of those first segments.
 
   For example, if the user asks you what your opinion is of their linktree, you should recognize that you don't currently have that in your context, then recognize that there is documentation for a links app in your system prompt, and then pull in that data with the following response.
 
@@ -461,7 +469,12 @@
   [%pass /ai %agent [our.bowl %links] %poke %links-action !>([%new 'http://google.com' 'Google' 'http://google.com/google-logo'])]
   Adds a link to the user's links.
 
-  We won't implement the delete and reorder actions now, since that would require you to have access to the state of the app.
+  We won't implement the delete and reorder actions right now.
+  
+  Scry paths:
+
+  /=links=/links
+  Get a list of the user's links
   
   --------
 

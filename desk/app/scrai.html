@@ -1,223 +1,309 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Scrai</title>
   <style>
     /* ---------- layout & typography ---------- */
+    * { box-sizing: border-box; }
     body, html {
       margin: 0;
       padding: 0;
-      background: #f5f5f5;
-      font-family: Arial, sans-serif;
       height: 100%;
       width: 100%;
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
       display: flex;
       justify-content: center;
       align-items: flex-start;
       color: #333;
     }
-    .container { max-width: 800px; width: 100%; padding: 20px; box-sizing: border-box; }
-
-    /* ---------- data path chips ---------- */
-    .data-list { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
-    .data-card {
-      background: #fff; border: 1px solid #ccc; border-radius: 4px;
-      padding: 10px 15px; cursor: pointer; transition: background 0.2s;
+    .container {
+      width: 100%;
+      max-width: 800px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
     }
-    .data-card:hover { background: #e6f0ff; }
-    .data-card.selected { background: #007bff; color: #fff; border-color: #007bff; }
+
+    /* ---------- conversation ---------- */
+    #messagesContainer {
+      flex: 1 1 auto;
+      overflow-y: auto;
+      padding-right: 4px; /* space for scrollbar */
+      max-height: 70vh;
+    }
+    .message {
+      padding: 8px 12px;
+      border-radius: 6px;
+      margin-bottom: 8px;
+      line-height: 1.4;
+      word-wrap: break-word;
+      max-width: 75%;
+    }
+    .message.system    { background: #e9ecef; color: #555; align-self: center; max-width: 90%; }
+    .message.user      { background: #007bff; color: #fff; align-self: flex-end; }
+    .message.assistant { background: #fff; color: #333; border: 1px solid #ccc; align-self: flex-start; }
+    .message.error     { background: #ffefef; color: #b00020; border: 1px solid #f5c2c7; align-self: stretch; max-width: 90%; }
+    .message.scry      { background: #fff; border: 1px solid #ccc; padding: 0; }
+    .message.scry > *  { margin: 0; }
+
+    pre {
+      background: #f0f0f0;
+      padding: 12px;
+      border-radius: 4px;
+      overflow-x: auto;
+      margin: 0;
+    }
 
     /* ---------- input area ---------- */
     #requestInput {
-      width: 100%; height: 80px; padding: 10px; font-size: 14px;
-      border: 1px solid #ccc; border-radius: 4px; resize: vertical;
-      box-sizing: border-box; margin-bottom: 10px;
+      width: 100%;
+      height: 80px;
+      resize: vertical;
+      font-size: 14px;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
     }
-    .attachment-container { margin: 10px 0; font-style: italic; }
 
     /* ---------- buttons & spinner ---------- */
     #sendButton {
-      padding: 10px 20px; font-size: 14px; background: #007bff; color: #fff;
-      border: none; border-radius: 4px; cursor: pointer; transition: background 0.2s;
+      padding: 10px 20px;
+      font-size: 14px;
+      background: #007bff;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.2s;
+      align-self: flex-end;
     }
-    #sendButton:disabled { background: #6c757d; cursor: not-allowed; }
+    #sendButton:disabled {
+      background: #6c757d;
+      cursor: not-allowed;
+    }
     .spinner {
-      display: inline-block; width: 20px; height: 20px;
-      border: 3px solid #ccc; border-top-color: #007bff;
-      border-radius: 50%; animation: spin 1s linear infinite;
-      vertical-align: middle; margin-left: 10px;
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid #ccc;
+      border-top-color: #007bff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      vertical-align: middle;
+      margin-left: 10px;
     }
     .hidden { display: none; }
     @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
-    /* ---------- response box ---------- */
-    #responseContainer {
-      margin-top: 20px; padding: 15px; background: #fff;
-      border: 1px solid #ccc; border-radius: 4px;
-      min-height: 40px; white-space: pre-wrap;
+    /* ---------- run button ---------- */
+    .run-btn {
+      margin-top: 10px;
+      padding: 6px 12px;
+      font-size: 13px;
+      border: none;
+      border-radius: 4px;
+      background: #28a745;
+      color: #fff;
+      cursor: pointer;
+      transition: background 0.2s;
     }
-    pre {
-      background: #f0f0f0; padding: 12px; border-radius: 4px;
-      overflow-x: auto; margin: 0;
-    }
+    .run-btn:disabled { background: #6c757d; cursor: not-allowed; }
   </style>
 </head>
 <body>
   <div class="container">
-    <div class="data-list" id="dataContainer"></div>
+    <div id="messagesContainer"></div>
 
-    <textarea id="requestInput" placeholder="Enter your request..."></textarea>
-    <div class="attachment-container">Attached path: <span id="attachedPath">None</span></div>
-    <button id="sendButton">Send</button><div id="loadingSpinner" class="spinner hidden"></div>
-    <div id="responseContainer"></div>
+    <textarea id="requestInput" placeholder="Type your message and hit Send…"></textarea>
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <button id="sendButton">Send</button>
+      <div id="loadingSpinner" class="spinner hidden"></div>
+    </div>
   </div>
 
   <script>
-    document.addEventListener("DOMContentLoaded", () => {
-      let dataPaths    = [];
-      let curRespObj   = null;      // parsed object
-      let attachedPath = null;
-      let pollingId    = null;
+    document.addEventListener('DOMContentLoaded', () => {
+      /* ---------- state ---------- */
+      let lastMsgCount = 0;
+      const seenPokes = new Set(); // prevent duplicate poke buttons
 
+      /* ---------- element refs ---------- */
       const $ = id => document.getElementById(id);
-      const dataContainer = $('dataContainer');
-      const requestInput  = $('requestInput');
-      const attachedSpan  = $('attachedPath');
-      const sendButton    = $('sendButton');
-      const spinner       = $('loadingSpinner');
-      const respBox       = $('responseContainer');
+      const messagesEl = $('messagesContainer');
+      const inputEl    = $('requestInput');
+      const sendBtn    = $('sendButton');
+      const spinnerEl  = $('loadingSpinner');
 
-      /* ---------- parsing helper ---------- */
-      const parseResponse = raw => {
-        if (!raw) return null;
-        if (typeof raw === 'object') return raw;
+      /* ---------- helpers ---------- */
+      const safeJSONParse = txt => {
+        try { return JSON.parse(txt); } catch (e) { console.error('JSON parse error', e, txt); return null; }
+      };
+
+      // Some backends occasionally emit invalid numeric literals (e.g., 1.750.202.139.507).
+      // We attempt a minimal sanitisation by quoting any suspicious time values.
+      const sanitiseStateText = txt => txt.replace(/"time":\s*([0-9]+(?:\.[0-9]+){2,})/g, '"time":"$1"');
+
+      const fetchState = () =>
+        fetch('/scrai/state')
+          .then(r => r.text())
+          .then(t => safeJSONParse(sanitiseStateText(t)) || { messages: [] });
+
+      const cleanAndParseJSON = str => {
         try {
-          const cleaned = raw
-            .replace(/\\0a/g, '\n')               // literal backslash+0a -> newline
-            .replace(/[\u0000-\u001F]/g, '');     // strip control chars
-          return JSON.parse(cleaned);
-        } catch (e) {
-          console.error('parseResponse error', e, raw);
-          return null;
-        }
+          return JSON.parse(str
+            .replace(/\\0a/g, '\n')
+            .replace(/[\u0000-\u001F]/g, '')
+          );
+        } catch { return null; }
       };
 
-      /* ---------- UI render ---------- */
-      const renderResponse = obj => {
-        respBox.innerHTML = '';
-        if (!obj) return;
+      const scrollToBottom = () => {
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+      };
 
-        if (obj.text) {
-          respBox.textContent = obj.text;
-        } else if (obj.poke) {
-          const pokeCord = obj.poke;              // capture for Run
-          const pre = document.createElement('pre');
-          pre.textContent = pokeCord;
-          respBox.appendChild(pre);
+      /* ---------- render ---------- */
+      const renderMessage = msg => {
+        const { who, text } = msg;
 
-          const runBtn = document.createElement('button');
-          runBtn.textContent = 'Run';
-          runBtn.style.marginTop = '10px';
+        // Handle special Urbit responses encoded as user messages
+        if (who === 'user' && text.startsWith('<URBIT RESPONSE - ERROR> ')) {
+          const errText = text.replace('<URBIT RESPONSE - ERROR> ', '');
+          const div = document.createElement('div');
+          div.className = 'message error';
+          div.textContent = errText;
+          messagesEl.appendChild(div);
+          return;
+        }
+        if (who === 'user' && text.startsWith('<URBIT RESPONSE - SCRY RESULT> ')) {
+          const html = text.replace('<URBIT RESPONSE - SCRY RESULT> ', '');
+          const div = document.createElement('div');
+          div.className = 'message scry';
+          div.innerHTML = html;
+          messagesEl.appendChild(div);
+          return;
+        }
 
-          runBtn.addEventListener('click', () => {
-            runBtn.disabled = true;
-            runBtn.textContent = 'Running…';
+        if (who === 'assistant') {
+          const obj = cleanAndParseJSON(text);
 
-            fetch('/scrai', {
-              method : 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body   : JSON.stringify({ run: { cord: pokeCord } })
-            })
-            .then(r => {
-              if (!r.ok) throw new Error('Run failed');
-              respBox.innerHTML = '<em>Poke sent.</em>';
-            })
-            .catch(err => {
-              console.error(err);
-              runBtn.disabled = false;
-              runBtn.textContent = 'Run';
-              alert('Error running poke');
+          // If assistant text is JSON and contains a scry, ignore entirely
+          if (obj && obj.scry) return;
+
+          if (obj && obj.poke) {
+            // Avoid adding identical poke twice
+            if (seenPokes.has(obj.poke)) return;
+            seenPokes.add(obj.poke);
+
+            const wrap = document.createElement('div');
+            wrap.className = 'message assistant';
+
+            const pre = document.createElement('pre');
+            pre.textContent = obj.poke;
+            wrap.appendChild(pre);
+
+            const btn = document.createElement('button');
+            btn.textContent = 'Run';
+            btn.className = 'run-btn';
+            btn.addEventListener('click', () => {
+              btn.disabled = true;
+              btn.textContent = 'Running…';
+              fetch('/scrai', {
+                method : 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body   : JSON.stringify({ run: { cord: obj.poke } })
+              })
+              .then(r => {
+                if (!r.ok) throw new Error('Run failed');
+                btn.textContent = 'Sent';
+              })
+              .catch(err => {
+                console.error(err);
+                btn.disabled = false;
+                btn.textContent = 'Run';
+                alert('Error running poke');
+              });
             });
-          });
+            wrap.appendChild(btn);
+            messagesEl.appendChild(wrap);
+            return;
+          }
 
-          respBox.appendChild(runBtn);
+          let assistantText = text;
+          if (obj && (obj.message || obj.text)) {
+            assistantText = obj.message || obj.text;
+          }
+
+          const div = document.createElement('div');
+          div.className = 'message assistant';
+          div.textContent = assistantText;
+          messagesEl.appendChild(div);
+          return;
+        }
+
+        // System messages
+        if (who === 'system') {
+          const div = document.createElement('div');
+          div.className = 'message system';
+          div.textContent = text;
+          messagesEl.appendChild(div);
+          return;
+        }
+
+        // Regular user message
+        const div = document.createElement('div');
+        div.className = 'message user';
+        div.textContent = text;
+        messagesEl.appendChild(div);
+      };
+
+      const processState = state => {
+        const msgs = state.messages || [];
+        if (msgs.length > lastMsgCount) {
+          const newMsgs = msgs.slice(lastMsgCount);
+          newMsgs.forEach(renderMessage);
+          lastMsgCount = msgs.length;
+          scrollToBottom();
         }
       };
 
-      const fetchState = () => fetch('/scrai/state').then(r => r.json());
+      /* ---------- polling loop ---------- */
+      const poll = () => fetchState().then(processState).catch(err => console.error('Polling error', err));
 
-      /* ---------- initial load ---------- */
-      fetchState().then(state => {
-        dataPaths  = state.data || [];
-        curRespObj = parseResponse(state.response);
-        renderDataList();
-        renderResponse(curRespObj);
-      });
-
-      function renderDataList() {
-        dataContainer.innerHTML = '';
-        dataPaths.forEach(path => {
-          const chip = document.createElement('div');
-          chip.className = 'data-card';
-          chip.textContent = path;
-          chip.addEventListener('click', () => selectPath(chip, path));
-          dataContainer.appendChild(chip);
-        });
-      }
-
-      function selectPath(el, path) {
-        document.querySelectorAll('.data-card.selected').forEach(c => c.classList.remove('selected'));
-        el.classList.add('selected');
-        attachedPath = path;
-        attachedSpan.textContent = path;
-      }
+      // Initial load then regular polling
+      poll();
+      setInterval(poll, 3000);
 
       /* ---------- send ---------- */
-      sendButton.addEventListener('click', () => {
-        const text = requestInput.value.trim();
-        if (!text || !attachedPath) return;
+      sendBtn.addEventListener('click', () => {
+        const text = inputEl.value.trim();
+        if (!text) return;
 
-        sendButton.disabled = true;
-        spinner.classList.remove('hidden');
-        respBox.textContent = '';
-
-        const prevRespJSON = JSON.stringify(curRespObj || {});
+        sendBtn.disabled = true;
+        spinnerEl.classList.remove('hidden');
 
         fetch('/scrai', {
           method : 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body   : JSON.stringify({ send: { text, path: attachedPath } })
+          body   : JSON.stringify({ send: { text } })
         })
         .then(r => {
           if (!r.ok) throw new Error('Send failed');
-          pollingId = setInterval(() => pollForChange(prevRespJSON), 3000);
+          inputEl.value = '';
+          // message will be appended on next poll
         })
         .catch(err => {
           console.error(err);
-          sendButton.disabled = false;
-          spinner.classList.add('hidden');
-          alert('Error sending request');
+          alert('Error sending message');
+        })
+        .finally(() => {
+          sendBtn.disabled = false;
+          spinnerEl.classList.add('hidden');
         });
       });
-
-      /* ---------- polling ---------- */
-      function pollForChange(prevJSON) {
-        fetchState()
-          .then(state => {
-            const obj = parseResponse(state.response);
-            const newJSON = JSON.stringify(obj || {});
-            if (newJSON !== prevJSON) {
-              clearInterval(pollingId);
-              curRespObj = obj;
-              renderResponse(curRespObj);
-              sendButton.disabled = false;
-              spinner.classList.add('hidden');
-            }
-          })
-          .catch(err => console.error('Polling error', err));
-      }
     });
   </script>
 </body>
