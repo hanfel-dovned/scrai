@@ -1,8 +1,10 @@
 |%
 +$  who  ?(%system %user %assistant)
-+$  message  [text=@t =path]
++$  message  [=who what=@t]
++$  messages  ((mop @da message) gth)
+::
 +$  action  :: user poke
-  $%  [%send =message]
+  $%  [%send text=@t]
       [%run =cord]
       [%set-llm-url url=@t]
       [%set-llm-auth auth=@t]

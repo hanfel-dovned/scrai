@@ -7,12 +7,13 @@
 +$  state-0
   $:  %0 
       data=(list path) 
-      response=@t
+      =messages
       llm-url=@t
       llm-auth=@t
       llm-model=@t
   ==
 +$  card  card:agent:gall
+++  orm  ((on @da message) gth)
 --
 ::
 %-  agent:dbug
@@ -130,16 +131,6 @@
   ::
   ::  Send a message to the LLM.
       %send
-    =/  text
-      %-  crip
-      ;:  weld
-        (trip text.message.act)
-        " FILE NAME: "
-        `tape`path.message.act
-        " FILE CONTENTS: "
-        .^((list @t) %cx (weld /(scot %p our.bowl)/scrai/(scot %da now.bowl) path.message.act))
-      ==
-    ~&  >>  text
     %-  emit
     ^-  card
     :*  %pass 
@@ -147,7 +138,7 @@
         %arvo 
         %i
         %request 
-        (llm-request text) 
+        (llm-request text.act) 
         *outbound-config:iris
     ==
   ::
@@ -171,10 +162,12 @@
       ==
   ::
       :-  ~
-      =/  messages
-        :~  [`who`%system prompt]
-            [`who`%user text]
-        ==
+      =/  msgs
+        :-  [`who`%system prompt]
+        %-  flop 
+        %+  turn 
+          (tap:orm messages)
+        |=([@da =message] message)
       %-  json-to-octs:server
       ^-  json
       %-  pairs:enjs:format
@@ -184,7 +177,7 @@
           :-  %messages
           :-  %a
           %+  turn
-            messages
+            msgs
           |=  [=who what=@t]
           ^-  json
           %-  pairs:enjs:format
@@ -194,14 +187,51 @@
       ==
   ==
 ::
-::  Receive response from LLM.
+::  Receive and process an LLM response.
 ++  arvo
   |=  [=wire sign=sign-arvo]
   ^+  that  
   ~&  >  sign
   ?.  ?=([%iris %http-response *] sign)  that
-  =/  reply=@t  (response-to-reply client-response.sign)
-  that(response reply)
+  =/  =time  (from-unix-ms:chrono:userlib (unm:chrono:userlib now.bowl))
+  ::
+  :: Convert the HTTP response to a raw message and append.
+  =/  reply=@t  
+    (response-to-reply client-response.sign)
+  =.  messages  (put:orm messages time [%assistant reply])
+  ::
+  ::  Convert the raw message to JSON.
+  ::  Based on the key, potentially run a command and append results.
+  =;  results=(unit message)
+    ?~  results  that
+    that(messages (put:orm messages (add 1 time) u.results))
+  =/  error
+    :-  ~ 
+    :-  %user 
+    'URBIT RESPONSE: The LLM\'s response was not formatted as expected JSON.'
+  =/  reply-json  (de:json:html reply)
+  ?~  reply-json  error
+  =/  json  u.reply-json
+  ?+    -.json  error
+      %o
+    ::
+    ::  "message" - do nothing (we already appended it)
+    ?:  (~(has by p.json) 'message')  ~
+    ::
+    ::  "poke" - do nothing (user runs this later)
+    ?:  (~(has by p.json) 'poke')  ~
+    ::
+    ::  "scry" - perform the scry and inject contents
+    ?:  (~(has by p.json) 'scry')
+    =/  scryson  (~(got by p.json) 'scry')
+    ?+    -.scryson  error
+        %s
+      ~  :: XX figure out what exactly this cord should encode, maybe this should be an object actually
+    ==
+    ::
+    ::  catch other cases
+    error
+  ==
 ::
 ::  Parse LLM response.
 ++  response-to-reply
@@ -276,8 +306,17 @@
     |=  =path
     (path:enjs:format path)
   ::
-    :-  %response
-    [%s response]
+    :-  %messages
+    :-  %a
+    %+  turn
+      (flop (tap:orm messages))
+    |=  [time=@da [=who text=cord]]
+    ^-  json
+    %-  pairs:enjs:format
+    :~  [%time s+(scot %ud (unm:chrono:userlib time))]
+        [%text s+text]
+        [%who s+who]
+    ==
   ==
 ::
 ++  dejs-post
@@ -286,8 +325,11 @@
   ^-  action
   %.  jon
   %-  of
-  :~  [%send (ot ~[text+so path+pa])]
+  :~  [%send (ot ~[text+so])]
       [%run (ot ~[cord+so])]
+      [%set-llm-url (ot ~[url+so])]
+      [%set-llm-auth (ot ~[auth+so])]
+      [%set-llm-model (ot ~[model+so])]
   ==
 ::
 ++  prompt
@@ -371,16 +413,14 @@
     "poke": "[%pass /ai %agent [our.bowl %links] %poke %links-action !>([%new 'https://x.com' 'X' 'https://x.com/favicon.ico'])]"
   }
 
-  (Notes for Next Version, disregard this paragraph: If the user makes a vague request, you can ask for clarification before responding with JSON. For instance, if they ask to add "a link to their X profile" without telling you what their account name is, you should ask what their account name is before guessing the link they want. If they ask to change the color of some background somewhere, ask which color rather than guessing, unless they seem to want you to just randomly change it.)
+  Notes for Next Version, disregard this paragraph: If the user makes a vague request, you can ask for clarification before responding with JSON. For instance, if they ask to add "a link to their X profile" without telling you what their account name is, you should ask what their account name is before guessing the link they want. If they ask to change the color of some background somewhere, ask which color rather than guessing, unless they seem to want you to just randomly change it.
 
   If the user does not seem to want you to perform an action, respond with a regular message. When responding with a regular message, respond with:
   {
-    "text": <response-text>
+    "message": <response-text>
   }
 
-  You will only receive a single message before conversational context is reset, so if you respond with text, respond as in-depth as possible; no clarifying questions.
-
-  However, be sure to ONLY respond with the JSON object as formatted in the way we discussed. Do not continue beyond the curly braces.
+  Be sure to ONLY respond with the JSON object as formatted in the way we discussed. Do not continue beyond the curly braces.
 
   ---------
 
