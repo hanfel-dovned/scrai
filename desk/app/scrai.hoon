@@ -473,7 +473,7 @@
   
   Scry paths:
 
-  /=links=/links
+  /=links=/links/html
   Get a list of the user's links
   
   --------
