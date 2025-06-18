@@ -10,6 +10,7 @@
       llm-url=@t
       llm-auth=@t
       llm-model=@t
+      docs=(map @tas text=@t)
   ==
 +$  card  card:agent:gall
 ++  orm  ((on @da message) gth)
@@ -108,7 +109,7 @@
     (handle-action act)
   ==
 ::
-::  User poke
+::  Pokes.
 ++  handle-action
   |=  act=action
   ^+  that
@@ -147,6 +148,15 @@
     ~&  >>  cord.act
     !<  card:agent:gall  
     (slap !>([bowl=bowl ..zuse]) (ream cord.act))
+  ::
+  ::  Other apps poke this to set the docs that will
+  ::  get put in the LLM system prompt.
+      %set-docs
+    that(docs (~(put by docs) dap.bowl text.act))
+  ::
+  ::  Delete docs from the given app.
+      %delete-docs
+    that(docs (~(del by docs) dap.bowl))
   ==
 ::
 ::  Create the outgoing LLM HTTP request
@@ -161,7 +171,17 @@
   ::
       :-  ~
       =/  msgs
-        :-  [`who`%system prompt]
+        :-  :-  `who`%system 
+            %-  crip
+            %+  weld
+              (trip prompt)
+            ^-  tape
+            =/  alldocs=tape  ""
+            =/  doclist  ~(val by docs)
+            |-
+            ?~  doclist
+              alldocs
+            $(doclist +.doclist, alldocs (weld alldocs (trip -.doclist)))
         %-  flop 
         %+  turn 
           (tap:orm messages)
@@ -445,40 +465,13 @@
 
   --------
 
-  Documentation for the apps running on the user's ship follows:
-
-  --------
-
-  %links
-
-  An Urbit app that lets you host a page of links from your ship.
-
-  Has the following type definitions:
-  
-  |%
-  +$  link  [url=@t text=@t image-url=@t]
-  +$  action  
-    $%  [%new =link]
-        [%delete index=@ud]
-        [%reorder current=@ud new=@ud]
-    ==
-  --
-
-  So, examples of the cards that you can send will be:
-  
-  [%pass /ai %agent [our.bowl %links] %poke %links-action !>([%new 'http://google.com' 'Google' 'http://google.com/google-logo'])]
-  Adds a link to the user's links.
-
-  We won't implement the delete and reorder actions right now.
-  
-  Scry paths:
-
-  /=links=/links/html
-  Get a list of the user's links
-  
-  --------
-
   Finally, be sure to ONLY respond with the JSON object as formatted in the way we discussed. Do not continue beyond the curly braces.
+
+  --------
+
+  Documentation for the apps running on the user's ship follows (if nothing follows this sentence, they have no apps you can interact with):
+
+  --------
   
   '''
 ::
