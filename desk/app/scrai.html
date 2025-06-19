@@ -5,121 +5,239 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Scrai</title>
   <style>
-    /* ---------- layout & typography ---------- */
+    /* ---------- GLOBAL LAYOUT ----------------------------------- */
+    /* Make the lone flex-item (.container) fill the row at once   */
+    body > .container {
+      flex: 1 1 100%;        /* grab 100 % width right away        */
+    }
+
+    /* ---------- MESSAGES CONTAINER ------------------------------ */
+    /* Turn it into a flex column so align-self now works           */
+    #messagesContainer {
+      flex: 1 1 0%;
+      width: 100%;           /* prevents the early “skinny” look   */
+      display: flex;         /* new                                */
+      flex-direction: column;/* new                                */
+    }
+
+    /* ---------- MESSAGE BUBBLES --------------------------------- */
+    .message {
+      max-width: 75%;
+      width: fit-content;    /* shrink to content, then cap at 75 % */
+    }
+
+    .message.user {
+      align-self: flex-end;  /* now effective because parent is flex */
+      text-align: right;     /* optional: right-align the text       */
+    }
+    /* -------------------------------------------------- */
+    /*  Design tokens                                     */
+    /* -------------------------------------------------- */
+    :root {
+      --bg-0: #0f0f0f;
+      --bg-1: #181818;
+      --bg-2: #222;
+      --bg-3: #2e2e2e;
+      --primary: #1e90ff;
+      --primary-hover: #2a9dff;
+      --assistant-bg: #313131;
+      --assistant-border: #444;
+      --error-bg: #471010;
+      --error-border: #b3261e;
+      --error-text: #ffb4ab;
+      --text-main: #e5e5e5;
+      --text-sub: #9d9d9d;
+      --radius: 10px;
+      --fade-time: 300ms;
+      --glow: 0 0 12px rgba(30,144,255,0.25);
+    }
+
+    /* -------------------------------------------------- */
+    /*  Global layout                                     */
+    /* -------------------------------------------------- */
     * { box-sizing: border-box; }
-    body, html {
+    html, body {
+      height: 100%;
       margin: 0;
       padding: 0;
-      height: 100%;
-      width: 100%;
-      font-family: Arial, sans-serif;
-      background: #f5f5f5;
+      background: var(--bg-0);
+      color: var(--text-main);
+      font-family: "Inter", Arial, sans-serif;
       display: flex;
       justify-content: center;
       align-items: flex-start;
-      color: #333;
     }
     .container {
       width: 100%;
-      max-width: 800px;
-      padding: 20px;
+      max-width: 920px;
+      height: 100%;
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      padding: 24px 20px 16px;
+      gap: 16px;
     }
 
-    /* ---------- conversation ---------- */
+    /* -------------------------------------------------- */
+    /*  Messages                                          */
+    /* -------------------------------------------------- */
     #messagesContainer {
-      flex: 1 1 auto;
-      overflow-y: auto;
-      padding-right: 4px; /* space for scrollbar */
-      max-height: 70vh;
+    flex: 1 1 0%;      /* reserve space even when empty   */
+    width: 100%;       /* prevents the “skinny” look      */
+    min-height: 280px; /* optional: keep some vertical space */
+    overflow-y: auto;
+    padding-right: 4px;
+    background: var(--bg-1);
+    border: 1px solid var(--bg-3);
+    border-radius: var(--radius);
+    padding: 20px 18px;
+    scroll-behavior: smooth;
+  }
+
+    #messagesContainer::-webkit-scrollbar {
+      width: 8px;
     }
+    #messagesContainer::-webkit-scrollbar-thumb {
+      background: var(--bg-3);
+      border-radius: 4px;
+    }
+
     .message {
-      padding: 8px 12px;
-      border-radius: 6px;
-      margin-bottom: 8px;
-      line-height: 1.4;
-      word-wrap: break-word;
       max-width: 75%;
+      margin-bottom: 14px;
+      padding: 10px 14px;
+      border-radius: var(--radius);
+      line-height: 1.45;
+      word-break: break-word;
+      animation: fadeInUp var(--fade-time) ease-out;
     }
-    .message.system    { background: #e9ecef; color: #555; align-self: center; max-width: 90%; }
-    .message.user      { background: #007bff; color: #fff; align-self: flex-end; }
-    .message.assistant { background: #fff; color: #333; border: 1px solid #ccc; align-self: flex-start; }
-    .message.error     { background: #ffefef; color: #b00020; border: 1px solid #f5c2c7; align-self: stretch; max-width: 90%; }
-    .message.scry      { background: #fff; border: 1px solid #ccc; padding: 0; }
-    .message.scry > *  { margin: 0; }
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .message.system {
+      background: transparent;
+      color: var(--text-sub);
+      text-align: center;
+      margin: 12px auto;
+      max-width: 90%;
+    }
+    .message.user {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
+      color: #fff;
+      margin-left: auto;     /* <— this does the trick       */
+      text-align: right;     /* optional: right-align text   */
+      box-shadow: var(--glow);
+    }
+    .message.assistant {
+      background: var(--assistant-bg);
+      border: 1px solid var(--assistant-border);
+      align-self: flex-start;
+    }
+    .message.error {
+      background: var(--error-bg);
+      border: 1px solid var(--error-border);
+      color: var(--error-text);
+      max-width: 90%;
+      align-self: stretch;
+    }
+    .message.scry {
+      background: var(--assistant-bg);
+      border: 1px solid var(--assistant-border);
+      padding: 0;
+      overflow: hidden;
+      align-self: stretch;
+    }
+    .message.scry > * { margin: 0; }
 
     pre {
-      background: #f0f0f0;
-      padding: 12px;
-      border-radius: 4px;
-      overflow-x: auto;
+      background: var(--bg-2);
       margin: 0;
+      padding: 12px;
+      border-radius: var(--radius);
+      overflow-x: auto;
     }
 
-    /* ---------- input area ---------- */
+    /* -------------------------------------------------- */
+    /*  Composer                                          */
+    /* -------------------------------------------------- */
+    .composer {
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+    }
     #requestInput {
-      width: 100%;
-      height: 80px;
+      flex: 1 1 auto;
+      height: 90px;
       resize: vertical;
-      font-size: 14px;
-      padding: 10px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
+      padding: 12px 14px;
+      font-size: 15px;
+      background: var(--bg-1);
+      border: 1px solid var(--bg-3);
+      border-radius: var(--radius);
+      color: var(--text-main);
+    }
+    #requestInput:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: var(--glow);
     }
 
-    /* ---------- buttons & spinner ---------- */
     #sendButton {
-      padding: 10px 20px;
-      font-size: 14px;
-      background: #007bff;
-      color: #fff;
+      padding: 12px 20px;
+      background: var(--primary);
       border: none;
-      border-radius: 4px;
+      border-radius: var(--radius);
+      color: #fff;
+      font-size: 15px;
       cursor: pointer;
-      transition: background 0.2s;
-      align-self: flex-end;
+      transition: background 0.2s ease;
     }
+    #sendButton:hover:not(:disabled) { background: var(--primary-hover); }
     #sendButton:disabled {
-      background: #6c757d;
+      background: var(--bg-3);
       cursor: not-allowed;
     }
+
     .spinner {
-      display: inline-block;
       width: 20px;
       height: 20px;
-      border: 3px solid #ccc;
-      border-top-color: #007bff;
+      border: 3px solid var(--bg-3);
+      border-top-color: var(--primary);
       border-radius: 50%;
       animation: spin 1s linear infinite;
-      vertical-align: middle;
-      margin-left: 10px;
     }
-    .hidden { display: none; }
     @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    .hidden { display: none; }
 
-    /* ---------- run button ---------- */
+    /* -------------------------------------------------- */
+    /*  Run button style                                  */
+    /* -------------------------------------------------- */
     .run-btn {
+      display: inline-block;
       margin-top: 10px;
-      padding: 6px 12px;
-      font-size: 13px;
-      border: none;
-      border-radius: 4px;
-      background: #28a745;
+      padding: 6px 14px;
+      font-size: 14px;
+      background: #3cb371;
       color: #fff;
+      border: none;
+      border-radius: var(--radius);
       cursor: pointer;
-      transition: background 0.2s;
+      transition: background 0.2s ease;
     }
-    .run-btn:disabled { background: #6c757d; cursor: not-allowed; }
+    .run-btn:hover:not(:disabled) { background: #47c181; }
+    .run-btn:disabled {
+      background: var(--bg-3);
+      cursor: not-allowed;
+    }
   </style>
 </head>
 <body>
   <div class="container">
     <div id="messagesContainer"></div>
 
-    <textarea id="requestInput" placeholder="Type your message and hit Send…"></textarea>
-    <div style="display: flex; align-items: center; gap: 8px;">
+    <div class="composer">
+      <textarea id="requestInput" placeholder="Type your message… (Shift+Enter for newline)"></textarea>
       <button id="sendButton">Send</button>
       <div id="loadingSpinner" class="spinner hidden"></div>
     </div>
@@ -127,182 +245,139 @@
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      /* ---------- state ---------- */
+      /* ---------------------------------------------- */
+      /*  State                                         */
+      /* ---------------------------------------------- */
       let lastMsgCount = 0;
-      const seenPokes = new Set(); // prevent duplicate poke buttons
+      const seenPokes = new Set();
 
-      /* ---------- element refs ---------- */
+      /* ---------------------------------------------- */
+      /*  Element refs                                  */
+      /* ---------------------------------------------- */
       const $ = id => document.getElementById(id);
       const messagesEl = $('messagesContainer');
       const inputEl    = $('requestInput');
       const sendBtn    = $('sendButton');
       const spinnerEl  = $('loadingSpinner');
 
-      /* ---------- helpers ---------- */
-      const safeJSONParse = txt => {
-        try { return JSON.parse(txt); } catch (e) { console.error('JSON parse error', e, txt); return null; }
-      };
-
-      // Some backends occasionally emit invalid numeric literals (e.g., 1.750.202.139.507).
-      // We attempt a minimal sanitisation by quoting any suspicious time values.
+      /* ---------------------------------------------- */
+      /*  Networking helpers                            */
+      /* ---------------------------------------------- */
+      const safeJSONParse = txt => { try { return JSON.parse(txt); } catch { return null; } };
       const sanitiseStateText = txt => txt.replace(/"time":\s*([0-9]+(?:\.[0-9]+){2,})/g, '"time":"$1"');
+      const fetchState = () => fetch('/scrai/state').then(r => r.text()).then(t => safeJSONParse(sanitiseStateText(t)) || { messages: [] });
+      const postSend  = text => fetch('/scrai', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ send: { text } }) });
+      const postRun   = cord => fetch('/scrai', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ run: { cord } }) });
 
-      const fetchState = () =>
-        fetch('/scrai/state')
-          .then(r => r.text())
-          .then(t => safeJSONParse(sanitiseStateText(t)) || { messages: [] });
+      /* ---------------------------------------------- */
+      /*  Render utils                                  */
+      /* ---------------------------------------------- */
+      const scrollToBottom = () => messagesEl.scrollTo({ top: messagesEl.scrollHeight, behavior: 'smooth' });
 
       const cleanAndParseJSON = str => {
         try {
-          return JSON.parse(str
-            .replace(/\\0a/g, '\n')
-            .replace(/[\u0000-\u001F]/g, '')
-          );
+          return JSON.parse(str.replace(/\\0a/g, '\n').replace(/[\u0000-\u001F]/g, ''));
         } catch { return null; }
       };
 
-      const scrollToBottom = () => {
-        messagesEl.scrollTop = messagesEl.scrollHeight;
+      const addMsgEl = (className, html) => {
+        const div = document.createElement('div');
+        div.className = `message ${className}`;
+        if (typeof html === 'string') div.innerHTML = html;
+        else div.appendChild(html);
+        messagesEl.appendChild(div);
+        scrollToBottom();
       };
 
-      /* ---------- render ---------- */
       const renderMessage = msg => {
         const { who, text } = msg;
-
-        // Handle special Urbit responses encoded as user messages
+        /* urbit user markers */
         if (who === 'user' && text.startsWith('<URBIT RESPONSE - ERROR> ')) {
-          const errText = text.replace('<URBIT RESPONSE - ERROR> ', '');
-          const div = document.createElement('div');
-          div.className = 'message error';
-          div.textContent = errText;
-          messagesEl.appendChild(div);
+          addMsgEl('error', text.slice(25));
           return;
         }
         if (who === 'user' && text.startsWith('<URBIT RESPONSE - SCRY RESULT> ')) {
-          const html = text.replace('<URBIT RESPONSE - SCRY RESULT> ', '');
-          const div = document.createElement('div');
-          div.className = 'message scry';
-          div.innerHTML = html;
-          messagesEl.appendChild(div);
+          addMsgEl('scry', text.slice(30));
           return;
         }
 
         if (who === 'assistant') {
           const obj = cleanAndParseJSON(text);
-
-          // If assistant text is JSON and contains a scry, ignore entirely
-          if (obj && obj.scry) return;
-
+          if (obj && obj.scry) return; // ignore scries
           if (obj && obj.poke) {
-            // Avoid adding identical poke twice
             if (seenPokes.has(obj.poke)) return;
             seenPokes.add(obj.poke);
-
-            const wrap = document.createElement('div');
-            wrap.className = 'message assistant';
-
+            const wrapper = document.createElement('div');
             const pre = document.createElement('pre');
             pre.textContent = obj.poke;
-            wrap.appendChild(pre);
-
+            wrapper.appendChild(pre);
             const btn = document.createElement('button');
             btn.textContent = 'Run';
             btn.className = 'run-btn';
-            btn.addEventListener('click', () => {
+            btn.onclick = () => {
               btn.disabled = true;
               btn.textContent = 'Running…';
-              fetch('/scrai', {
-                method : 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body   : JSON.stringify({ run: { cord: obj.poke } })
-              })
-              .then(r => {
-                if (!r.ok) throw new Error('Run failed');
-                btn.textContent = 'Sent';
-              })
-              .catch(err => {
-                console.error(err);
-                btn.disabled = false;
-                btn.textContent = 'Run';
-                alert('Error running poke');
+              postRun(obj.poke).then(r => {
+                btn.textContent = r.ok ? 'Sent' : 'Failed';
+              }).catch(() => {
+                btn.textContent = 'Failed';
               });
-            });
-            wrap.appendChild(btn);
-            messagesEl.appendChild(wrap);
+            };
+            wrapper.appendChild(btn);
+            addMsgEl('assistant', wrapper);
             return;
           }
-
-          let assistantText = text;
-          if (obj && (obj.message || obj.text)) {
-            assistantText = obj.message || obj.text;
-          }
-
-          const div = document.createElement('div');
-          div.className = 'message assistant';
-          div.textContent = assistantText;
-          messagesEl.appendChild(div);
+          const assistantText = (obj && (obj.message||obj.text)) || text;
+          addMsgEl('assistant', assistantText);
           return;
         }
 
-        // System messages
         if (who === 'system') {
-          const div = document.createElement('div');
-          div.className = 'message system';
-          div.textContent = text;
-          messagesEl.appendChild(div);
+          addMsgEl('system', text);
           return;
         }
 
-        // Regular user message
-        const div = document.createElement('div');
-        div.className = 'message user';
-        div.textContent = text;
-        messagesEl.appendChild(div);
+        addMsgEl('user', text);
       };
 
       const processState = state => {
         const msgs = state.messages || [];
         if (msgs.length > lastMsgCount) {
-          const newMsgs = msgs.slice(lastMsgCount);
-          newMsgs.forEach(renderMessage);
+          msgs.slice(lastMsgCount).forEach(renderMessage);
           lastMsgCount = msgs.length;
-          scrollToBottom();
         }
       };
 
-      /* ---------- polling loop ---------- */
-      const poll = () => fetchState().then(processState).catch(err => console.error('Polling error', err));
-
-      // Initial load then regular polling
+      /* ---------------------------------------------- */
+      /*  Poll loop                                     */
+      /* ---------------------------------------------- */
+      const poll = () => fetchState().then(processState).catch(console.error);
       poll();
-      setInterval(poll, 3000);
+      setInterval(poll, 2500);
 
-      /* ---------- send ---------- */
-      sendBtn.addEventListener('click', () => {
+      /* ---------------------------------------------- */
+      /*  Sending (optimistic)                          */
+      /* ---------------------------------------------- */
+      const sendCurrent = () => {
         const text = inputEl.value.trim();
         if (!text) return;
-
+        inputEl.value = '';
         sendBtn.disabled = true;
         spinnerEl.classList.remove('hidden');
 
-        fetch('/scrai', {
-          method : 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body   : JSON.stringify({ send: { text } })
-        })
-        .then(r => {
-          if (!r.ok) throw new Error('Send failed');
-          inputEl.value = '';
-          // message will be appended on next poll
-        })
-        .catch(err => {
-          console.error(err);
-          alert('Error sending message');
-        })
-        .finally(() => {
+        // optimistic render
+        addMsgEl('user', text);
+        lastMsgCount++; // prevent duplicate when it comes back
+
+        postSend(text).catch(err => console.error(err)).finally(() => {
           sendBtn.disabled = false;
           spinnerEl.classList.add('hidden');
         });
+      };
+
+      sendBtn.addEventListener('click', sendCurrent);
+      inputEl.addEventListener('keydown', e => {
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendCurrent(); }
       });
     });
   </script>

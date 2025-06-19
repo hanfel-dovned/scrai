@@ -440,7 +440,7 @@
 
   A path will always be formatted as:
   /~/appname/~/hello/world
-  /~/links/~/links
+  /~/links/~/links/html
   /~/example/~/this/is/a/path
 
   The app documentation writer may or may not include the initial segment surrounded by the ~s, where the center corresponds to the name of the app. If they omit this from their documentation, derive it from the name of the app and make sure to include all three of those first segments.
@@ -472,7 +472,7 @@
   Documentation for the apps running on the user's ship follows (if nothing follows this sentence, they have no apps you can interact with):
 
   --------
-  
+
   '''
 ::
 --
