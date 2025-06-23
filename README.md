@@ -3,9 +3,8 @@
 `%scrai` is a prototype for AI features on Urbit.
 
 - Connect to a running LLM by providing an API key.
-- Read files from Clay and include them in LLM queries.
-- Have the LLM generate actions to run on your ship:
-  - Add a link if you have [%links](https://github.com/hanfel-dovned/links) installed.
+- Have the LLM read data and generate actions.
+  - View your links or add a link if you have [%links](https://github.com/hanfel-dovned/links) installed.
 
 ## Installation
 

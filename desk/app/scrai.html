@@ -158,6 +158,23 @@
       overflow-x: auto;
     }
 
+    /* 1️⃣  Never let bubbles collapse when the list grows */
+    .message {                       /* applies to every bubble          */
+      flex-shrink: 0;                /* keep its full height             */
+    }
+
+    /* 2️⃣  Override width just for scried-HTML blocks */
+    .message.scry {                  /* those little HTML preview divs   */
+      width: 100%;                   /* take full row                    */
+      max-width: 100%;               /* ignore the 75 % cap              */
+      align-self: stretch;           /* match the container’s width      */
+    }
+
+    /* 3️⃣  (unchanged) user bubbles stay content-sized on the right  */
+    .message.user {
+      width: fit-content;            /* hugs text                        */
+    }
+
     /* -------------------------------------------------- */
     /*  Composer                                          */
     /* -------------------------------------------------- */
