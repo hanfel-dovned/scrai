@@ -241,30 +241,30 @@
     ::
     ::  "scry" - perform the scry and inject contents
     ?:  (~(has by p.json) 'scry')
-    =/  scryson  (~(got by p.json) 'scry')
-    ?+    -.scryson  error
-        %s
-      =/  p=path  (pa:dejs:format scryson)
-      ~&  >  p
-      ::  this will look like /~/appname/~/extension, so we insert bowls
-      =/  new=path
-        %+  welp
-          :~  (scot %p our.bowl)
-              +6:p
-              (scot %da now.bowl)
-          ==
-        +15:p
-      ~&  >  new
-      =/  scry-result  .^(@t %gy new)
-      :-  ~
-      :-  %user
-      %-  crip
-      %+  weld  
-        (trip '<URBIT RESPONSE - SCRY RESULT> ')
-      (trip scry-result)
-    ==
+      =/  scryson  (~(got by p.json) 'scry')
+      ?+    -.scryson  error
+          %s
+        =/  p=path  (pa:dejs:format scryson)
+        ~&  >  p
+        ::  this will look like /~/appname/~/extension, so we insert bowls
+        =/  new=path
+          %+  welp
+            :~  (scot %p our.bowl)
+                +6:p
+                (scot %da now.bowl)
+            ==
+          +15:p
+        ~&  >  new
+        =/  scry-result  .^(@t %gy new)
+        :-  ~
+        :-  %user
+        %-  crip
+        %+  weld  
+          (trip '<URBIT RESPONSE - SCRY RESULT> ')
+        (trip scry-result)
+      ==
     ::
-    ::  catch other cases
+    ::  catch malformed cases
     error
   ==
 ::
